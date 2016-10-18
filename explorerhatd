@@ -1,0 +1,189 @@
+#!/usr/bin/python3
+#
+# explorerhatd
+#
+# Explorer HatのIOをコマンドラインからコントロールするためのバックグラウンドプロセス
+#   [ehinput, ehoutput, ehlight, ehtouch]と連携
+#
+# Cppyright(c) 2016 pi@blue-black.ink
+#
+
+
+import explorerhat as eh
+import os.path
+import socket
+import sys
+import time
+
+
+SOCK_FILENAME = '/tmp/explorerd.sock'
+
+
+def light(data):
+    """LEDの制御"""
+    
+    leds = data.strip().split(',')
+    print(leds)
+
+    for led in leds:
+        led_lst = led.split('=')
+
+        if led_lst[0] == 'red':
+            if led_lst[1] == '1':
+                eh.light.red.on()
+            else:
+                eh.light.red.off()
+
+        elif led_lst[0] == 'blue':
+            if led_lst[1] == '1':
+                eh.light.blue.on()
+            else:
+                eh.light.blue.off()
+
+        elif led_lst[0] == 'yellow':
+            if led_lst[1] == '1':
+                eh.light.yellow.on()
+            else:
+                eh.light.yellow.off()
+
+        elif led_lst[0] == 'green':
+            if led_lst[1] == '1':
+                eh.light.green.on()
+            else:
+                eh.light.green.off()
+
+
+def touch(ch):
+    """タッチセンサの状態取得"""
+    
+    if ch == '0':   # 全チャンネル
+        th = eh.touch.is_pressed()
+        res = 0
+
+        for num in ['eight', 'seven', 'six', 'five', 'four', 'three', 'two', 'one']:
+            res *= 2
+            if th[num]:
+                res += 1
+
+    # 個別チャンネル
+    elif ch == '1':
+        res = 1 if eh.touch.one.is_pressed() else 0
+    elif ch == '2':
+        res = 1 if eh.touch.two.is_pressed() else 0
+    elif ch == '3':
+        res = 1 if eh.touch.three.is_pressed() else 0
+    elif ch == '4':
+        res = 1 if eh.touch.four.is_pressed() else 0
+    elif ch == '5':
+        res = 1 if eh.touch.five.is_pressed() else 0
+    elif ch == '6':
+        res = 1 if eh.touch.six.is_pressed() else 0
+    elif ch == '7':
+        res = 1 if eh.touch.seven.is_pressed() else 0
+    elif ch == '8':
+        res = 1 if eh.touch.eight.is_pressed() else 0
+
+    print('touch ch.{}={}'.format(ch, res))
+    
+    return res
+
+
+def inp():
+    """入力ポートの状態取得"""
+    
+    data = eh.input.read()
+
+    res = 0
+    for port in ['four', 'three', 'two', 'one']:
+        res *= 2
+        if data[port]:
+            res += 1
+
+    print('input is {}'.format(res))
+    
+    return res
+
+
+def outp(data):
+    """出力ポートの制御"""
+    
+    ports = data.strip().split(',')
+    print(ports)
+
+    for port in ports:
+        port_lst = port.split('=')
+
+        if port_lst[0] == 'p1':
+            if port_lst[1] == '1':
+                eh.output.one.on()
+            else:
+                eh.output.one.off()
+
+        elif port_lst[0] == 'p2':
+            if port_lst[1] == '1':
+                eh.output.two.on()
+            else:
+                eh.output.two.off()
+
+        elif port_lst[0] == 'p3':
+            if port_lst[1] == '1':
+                eh.output.three.on()
+            else:
+                eh.output.three.off()
+
+        elif port_lst[0] == 'p4':
+            if port_lst[1] == '1':
+                eh.output.four.on()
+            else:
+                eh.output.four.off()
+
+
+if __name__ == '__main__':
+    if os.path.exists(SOCK_FILENAME):   # 古いソケットが残っていたら消去
+        os.remove(SOCK_FILENAME)
+    
+    # ソケットを作成
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+        sock.bind(SOCK_FILENAME)
+        sock.listen(1)
+
+        while True:
+            try:
+                conn, addr = sock.accept()  # ソケットに接続あり
+                print('---Connected---')
+                sock_buffer = ''
+
+                with conn:
+                    while True:
+                        rcv = conn.recv(1024)   # 受信
+                        if not rcv:
+                            break
+ 
+                        sock_buffer = sock_buffer + rcv.decode()
+                        if not '\n' in sock_buffer: # デリミタ'\n'が見つからないときは受信を継続
+                            break
+                        else:
+                            cmd, data = sock_buffer.strip().split(':')
+                            
+                            if cmd == 'light':  # LEDコントロール
+                                light(data)
+                                
+                            elif cmd == 'touch':    # タッチセンサ
+                                res = str(touch(data)) + '\n'
+                                conn.send(res.encode())
+                            
+                            elif cmd == 'input':    # 入力ポート
+                                res = str(inp()) + '\n'
+                                conn.send(res.encode())
+                                
+                            elif cmd == 'output':   # 出力ポート
+                                outp(data)
+                
+                print('---Disconnected---')
+            
+            except KeyboardInterrupt:
+                break
+    
+    os.remove(SOCK_FILENAME)
+    print('\nbye')
+    sys.exit(0)
