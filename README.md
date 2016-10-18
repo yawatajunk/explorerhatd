@@ -59,6 +59,7 @@ $ pip3 install explorerhat
 $ mkdir ~/tools
 $ cd ~/tools
 $ git clone https://github.com/yawatajunk/explorerhatd.git
+$ git checkout 0.1a
 ```
 
 # Contents
