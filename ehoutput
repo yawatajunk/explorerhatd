@@ -1,0 +1,65 @@
+#!/usr/bin/python3
+#
+# ehoutput
+#
+# Explorer Hatの出力ポートを制御
+#
+# Cppyright(c) 2016 pi@blue-black.ink
+#
+
+
+import argparse
+import os.path
+import socket
+import sys
+import time
+
+
+SOCK_FILENAME = '/tmp/explorerd.sock'
+
+
+def arg_parse():
+    parser = argparse.ArgumentParser(description='Control output port on Explorer Hat.')
+    parser.add_argument('-p1', '--port1', help='output port 1', type=int, choices=(0,1))
+    parser.add_argument('-p2', '--port2', help='output port 2', type=int, choices=(0,1))
+    parser.add_argument('-p3', '--port3', help='output port 3', type=int, choices=(0,1))
+    parser.add_argument('-p4', '--port4', help='output port 4', type=int, choices=(0,1))
+    
+    args = parser.parse_args()
+
+    return(args)
+
+
+if __name__ == '__main__':
+ 
+    res = arg_parse()   # 引数処理
+
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+        sock.connect(SOCK_FILENAME)
+        msg = 'output:'
+        
+        if res.port1 == 1:
+            msg += 'p1=1,'
+        elif res.port1 == 0:
+            msg += 'p1=0,'
+
+        if res.port2 == 1:
+            msg += 'p2=1,'
+        elif res.port2 == 0:
+            msg += 'p2=0,'
+
+        if res.port3 == 1:
+            msg += 'p3=1,'
+        elif res.port3 == 0:
+            msg += 'p3=0,'
+
+        if res.port4 == 1:
+            msg += 'p4=1,'
+        elif res.port4 == 0:
+            msg += 'p4=0,'
+        
+        sock_msg = msg.rstrip(',') + '\n'
+        sock_msg = sock_msg.encode()  
+        sock.send(sock_msg)
+
+    sys.exit(0)

@@ -1,0 +1,50 @@
+#!/usr/bin/python3
+#
+# ehinput
+#
+# Explorer Hatの入力ポートの状態取得
+#
+# Cppyright(c) 2016 pi@blue-black.ink
+#
+
+
+import argparse
+import os.path
+import socket
+import sys
+import time
+
+
+SOCK_FILENAME = '/tmp/explorerd.sock'
+
+
+def arg_parse():
+    parser = argparse.ArgumentParser(description='Get states of the touch pads on Explorer Hat.')
+    
+    args = parser.parse_args()
+
+    return(args)
+
+
+if __name__ == '__main__':
+ 
+    res = arg_parse()   # 引数処理
+
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+        sock.connect(SOCK_FILENAME)
+        
+        sock_msg = b'input:\n'   
+        sock.send(sock_msg)
+        
+        data = b''
+        
+        while True:
+            data = data + sock.recv(1024)
+
+            if b'\n' in data:
+                res = data.decode()
+                break                
+
+        sys.stdout.write(res)
+
+    sys.exit(0)

@@ -1,0 +1,65 @@
+#!/usr/bin/python3
+#
+# ehlight
+#
+# Explorer HatのLEDを制御
+#
+# Cppyright(c) 2016 pi@blue-black.ink
+#
+
+
+import argparse
+import os.path
+import socket
+import sys
+import time
+
+
+SOCK_FILENAME = '/tmp/explorerd.sock'
+
+
+def arg_parse():
+    parser = argparse.ArgumentParser(description='On/Off LEDs on Explorer Hat.')
+    parser.add_argument('-r', '--red', help='Red LED', type=int, choices=(0,1))
+    parser.add_argument('-b', '--blue', help='Blue LED', type=int, choices=(0,1))
+    parser.add_argument('-y', '--yellow', help='Yellow LED', type=int, choices=(0,1))
+    parser.add_argument('-g', '--green', help='Green LED', type=int, choices=(0,1))
+    
+    args = parser.parse_args()
+
+    return(args)
+
+
+if __name__ == '__main__':
+ 
+    res = arg_parse()   # 引数処理
+
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+        sock.connect(SOCK_FILENAME)
+        msg = 'light:'
+        
+        if res.red == 1:
+            msg += 'red=1,'
+        elif res.red == 0:
+            msg += 'red=0,'
+
+        if res.blue == 1:
+            msg += 'blue=1,'
+        elif res.blue == 0:
+            msg += 'blue=0,'
+
+        if res.yellow == 1:
+            msg += 'yellow=1,'
+        elif res.yellow == 0:
+            msg += 'yellow=0,'
+
+        if res.green == 1:
+            msg += 'green=1,'
+        elif res.green == 0:
+            msg += 'green=0,'
+        
+        sock_msg = msg.rstrip(',') + '\n'
+        sock_msg = sock_msg.encode()  
+        sock.send(sock_msg)
+
+    sys.exit(0)
